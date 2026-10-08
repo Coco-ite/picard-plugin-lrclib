@@ -1,0 +1,21 @@
+uuid = "8e2c3f6a-156a-459a-9dfd-eeb4ca73b99d"
+name = "LRCLIB Lyrics"
+description = "Fetch synced or plain lyrics from LRCLIB and save them to tags and .lrc files"
+long_description = """
+Fetches lyrics from the LRCLIB crowdsourced database (https://lrclib.net).
+
+- Prefers synchronized lyrics, falls back to plain lyrics
+- Saves lyrics to the `lyrics` tag and optionally to a `.lrc` file next to each audio file
+- Right-click an album or track to fetch lyrics automatically or search manually
+- Optional automatic fetching when tracks are loaded or files are saved
+- Tool to clean up orphaned `.lrc` files
+
+Picard 3 port of the LRCLIB Lyrics plugin by Glicole (izaz4141/picard-lrclib),
+which was based on Dylancyclone's plugin.
+"""
+api = ["3.0"]
+authors = ["Glicole", "Dylancyclone", "Marcos Sánchez Ramírez"]
+license = "MIT"
+license_url = "https://opensource.org/licenses/MIT"
+categories = ["metadata"]
+version = "2.0.0"
