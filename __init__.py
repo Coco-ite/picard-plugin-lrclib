@@ -28,6 +28,7 @@ from picard.plugin3.api import (
     OptionsPage,
     PluginApi,
     Track,
+    t_,
 )
 
 
@@ -164,7 +165,7 @@ def fetch_json_blocking(api: PluginApi, url: str, params: dict):
 def show_search_table(api: PluginApi, query: str, response):
     parent = main_window(api)
     dialog = QtWidgets.QDialog(parent)
-    dialog.setWindowTitle("Buscar letras en LRCLIB")
+    dialog.setWindowTitle(api.tr("ui.search.title", "Search lyrics on LRCLIB"))
     dialog.resize(700, 400)
 
     layout = QtWidgets.QVBoxLayout(dialog)
@@ -172,15 +173,22 @@ def show_search_table(api: PluginApi, query: str, response):
     search_layout = QtWidgets.QHBoxLayout()
     search_input = QtWidgets.QLineEdit()
     search_input.setText(query)
-    search_input.setPlaceholderText("Escribe tu búsqueda...")
-    search_button = QtWidgets.QPushButton("Buscar")
+    search_input.setPlaceholderText(api.tr("ui.search.placeholder", "Type your search..."))
+    search_button = QtWidgets.QPushButton(api.tr("ui.search.button", "Search"))
     search_layout.addWidget(search_input)
     search_layout.addWidget(search_button)
     layout.addLayout(search_layout)
 
     table = QtWidgets.QTableWidget(dialog)
     table.setColumnCount(6)
-    table.setHorizontalHeaderLabels(["#", "Canción", "Artista", "Duración", "Álbum", "Sincronizada"])
+    table.setHorizontalHeaderLabels([
+        "#",
+        api.tr("ui.search.column.track", "Song"),
+        api.tr("ui.search.column.artist", "Artist"),
+        api.tr("ui.search.column.duration", "Duration"),
+        api.tr("ui.search.column.album", "Album"),
+        api.tr("ui.search.column.synced", "Synced"),
+    ])
     table.verticalHeader().setVisible(False)
     hheader = table.horizontalHeader()
     hheader.setDefaultAlignment(QtCore.Qt.AlignmentFlag.AlignHCenter | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -221,7 +229,7 @@ def show_search_table(api: PluginApi, query: str, response):
                 item.get("artistName") or "?",
                 format_duration(item.get("duration") or 0),
                 item.get("albumName") or "?",
-                "Sí" if has_synced else "No",
+                api.tr("ui.search.yes", "Yes") if has_synced else api.tr("ui.search.no", "No"),
             ]
             for col, val in enumerate(values, start=1):
                 cell = QtWidgets.QTableWidgetItem(str(val))
@@ -363,11 +371,14 @@ def process_response(api: PluginApi, method: str, metadata, linked_files: list[F
                 and not auto_overwrite
                 and method not in ("get_on_load", "get_on_save")
             ):
-                desc = '¿Reemplazar la letra de "{}"?\n\n{}'.format(
-                    file.metadata.get("title") or os.path.basename(full_path),
-                    truncate_text(lyrics, 5, 42),
+                desc = api.tr(
+                    "message.replace_lyrics.text",
+                    'Replace the lyrics of "{title}"?\n\n{lyrics}',
+                    title=file.metadata.get("title") or os.path.basename(full_path),
+                    lyrics=truncate_text(lyrics, 5, 42),
                 )
-                if not confirm_replace(main_window(api), "Reemplazar letra", desc):
+                title_text = api.tr("message.replace_lyrics.title", "Replace lyrics")
+                if not confirm_replace(main_window(api), title_text, desc):
                     continue
 
             file.metadata["lyrics"] = file_lyrics
@@ -388,8 +399,13 @@ def process_response(api: PluginApi, method: str, metadata, linked_files: list[F
                     api.logger.error("Failed to write %s: %s", file_lrc, e)
                     QtWidgets.QMessageBox.critical(
                         main_window(api),
-                        "No se pudo guardar el archivo de letra",
-                        f"No se pudo guardar:\n\n{file_lrc}\n\nError: {e}",
+                        api.tr("error.save_lyrics_file.title", "Could not save the lyrics file"),
+                        api.tr(
+                            "error.save_lyrics_file.text",
+                            "Could not save:\n\n{path}\n\nError: {error}",
+                            path=file_lrc,
+                            error=e,
+                        ),
                     )
 
         api.logger.info('Lyrics loaded for track "%s" by %s', title, artist)
@@ -459,7 +475,7 @@ def _tracks_from_objects(objs):
 
 
 class LrclibGetLyrics(BaseAction):
-    TITLE = "Obtener letras automáticamente (LRCLIB)"
+    TITLE = t_("action.get_lyrics", "Fetch lyrics automatically (LRCLIB)")
 
     def callback(self, objs):
         for track in _tracks_from_objects(objs):
@@ -473,7 +489,7 @@ class LrclibGetLyrics(BaseAction):
 
 
 class LrclibSearchLyrics(BaseAction):
-    TITLE = "Buscar letras manualmente (LRCLIB)…"
+    TITLE = t_("action.search_lyrics", "Search lyrics manually (LRCLIB)…")
 
     def callback(self, objs):
         for track in _tracks_from_objects(objs):
@@ -501,12 +517,14 @@ class LrclibOptionsPage(OptionsPage):
 
         self.checkboxes: dict[str, QtWidgets.QCheckBox] = {}
         labels = {
-            "get_on_load": "Buscar letras al cargar las pistas (hace más lenta la carga)",
-            "get_on_save": "Buscar letras al guardar los archivos",
-            "auto_overwrite": "Reemplazar letras existentes sin preguntar",
-            "save_lrc_file": "Guardar archivo .lrc junto a cada canción",
-            "ignore_instrumental": "Ignorar pistas instrumentales",
-            "plain_as_txt": "Guardar letras sin sincronizar como .txt",
+            "get_on_load": self.api.tr(
+                "options.get_on_load", "Fetch lyrics when loading tracks (makes loading slower)"
+            ),
+            "get_on_save": self.api.tr("options.get_on_save", "Fetch lyrics when saving files"),
+            "auto_overwrite": self.api.tr("options.auto_overwrite", "Replace existing lyrics without asking"),
+            "save_lrc_file": self.api.tr("options.save_lrc_file", "Save a .lrc file next to each song"),
+            "ignore_instrumental": self.api.tr("options.ignore_instrumental", "Ignore instrumental tracks"),
+            "plain_as_txt": self.api.tr("options.plain_as_txt", "Save unsynced lyrics as .txt"),
         }
         for key, label in labels.items():
             checkbox = QtWidgets.QCheckBox(label, self)
@@ -514,19 +532,29 @@ class LrclibOptionsPage(OptionsPage):
             self.checkboxes[key] = checkbox
 
         box.addSpacing(20)
-        cleanup_label = QtWidgets.QLabel("Herramientas de limpieza:", self)
+        cleanup_label = QtWidgets.QLabel(self.api.tr("options.cleanup.label", "Cleanup tools:"), self)
         cleanup_label.setStyleSheet("font-weight: bold;")
         box.addWidget(cleanup_label)
 
-        cleanup_button = QtWidgets.QPushButton("Borrar archivos .lrc huérfanos…", self)
-        cleanup_button.setToolTip("Busca en una carpeta archivos .lrc que ya no tienen su canción y los borra")
+        cleanup_button = QtWidgets.QPushButton(
+            self.api.tr("options.cleanup.button", "Delete orphaned .lrc files…"), self
+        )
+        cleanup_button.setToolTip(
+            self.api.tr(
+                "options.cleanup.tooltip",
+                "Searches a folder for .lrc files that no longer have their song and deletes them",
+            )
+        )
         cleanup_button.clicked.connect(self.clean_orphaned_lrc_files)
         box.addWidget(cleanup_button)
 
         box.addStretch(1)
         description = QtWidgets.QLabel(
-            "Letras de LRCLIB (https://lrclib.net), base de datos colaborativa.\n"
-            "Solo para uso personal; no se permite el uso comercial.",
+            self.api.tr(
+                "options.description",
+                "Lyrics from LRCLIB (https://lrclib.net), a crowdsourced database.\n"
+                "For personal use only; commercial use is not allowed.",
+            ),
             self,
         )
         description.setWordWrap(True)
@@ -543,7 +571,7 @@ class LrclibOptionsPage(OptionsPage):
     def clean_orphaned_lrc_files(self):
         root_dir = QtWidgets.QFileDialog.getExistingDirectory(
             self,
-            "Elige la carpeta de tu música",
+            self.api.tr("options.cleanup.choose_folder", "Choose your music folder"),
             "",
             QtWidgets.QFileDialog.Option.ShowDirsOnly | QtWidgets.QFileDialog.Option.DontResolveSymlinks,
         )
@@ -551,10 +579,16 @@ class LrclibOptionsPage(OptionsPage):
             return
         removed = clean_directory(self.api, root_dir)
         if removed:
-            message = f"Se borraron {removed} archivo(s) .lrc huérfano(s)."
+            message = self.api.trn(
+                "options.cleanup.removed",
+                "Deleted {n} orphaned .lrc file.",
+                "Deleted {n} orphaned .lrc files.",
+                n=removed,
+            )
         else:
-            message = "No se encontraron archivos .lrc huérfanos."
-        QtWidgets.QMessageBox.information(self, "Limpieza terminada", message)
+            message = self.api.tr("options.cleanup.none", "No orphaned .lrc files were found.")
+        title = self.api.tr("options.cleanup.finished", "Cleanup finished")
+        QtWidgets.QMessageBox.information(self, title, message)
 
 
 def clean_directory(api: PluginApi, root_dir: str) -> int:
